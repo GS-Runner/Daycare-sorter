@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="사진분류기">
+<title>어린이집 사진 분류기</title>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--pk:#FF8FAB;--pk3:#FFD6E0;--pk4:#FFF0F3;--ye:#FFD966;--ye2:#FFF9C4;--gr:#66BB6A;--gr3:#E8F5E9;--bl:#64B5F6;--bl3:#E3F2FD;--or:#FFB74D;--ink:#2D2D2D;--muted:#9E9E9E;--bg:#FFF8FB;--border:#F8C8D8;--r:18px;--rs:12px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:60px;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 10% 15%,#FFE0EC44 0%,transparent 35%),radial-gradient(circle at 90% 10%,#B3E5FC33 0%,transparent 30%),radial-gradient(circle at 80% 80%,#E8F5E933 0%,transparent 35%)}
+.deco{position:fixed;pointer-events:none;z-index:0;font-size:20px;opacity:.14;user-select:none}
+.hdr{background:linear-gradient(135deg,#FF8FAB,#FFB347);padding:16px 18px 30px;position:relative;overflow:hidden;z-index:1}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:22px;background:var(--bg);border-radius:22px 22px 0 0}
+.hdr-in{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start}
+.hdr h1{font-size:20px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.15)}
+.hdr p{font-size:11px;color:rgba(255,255,255,.88);margin-top:3px}
+.made-by{font-size:10px;color:rgba(255,255,255,.85);font-weight:700;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:20px;white-space:nowrap;margin-top:2px}
+.hico{font-size:22px;margin-bottom:5px}
+#mstatus{position:fixed;top:0;left:0;right:0;background:var(--ye);color:#5D4037;padding:8px 16px;font-size:12px;font-weight:700;text-align:center;z-index:9000;transform:translateY(-100%);transition:transform .3s}
+#mstatus.show{transform:translateY(0)}
+.steps{display:flex;padding:0 14px;margin:12px 0 14px;align-items:flex-start;position:relative;z-index:1}
+.sbtn{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;outline:none}
+.sbtn:disabled{opacity:.35;cursor:default}
+.sc{width:32px;height:32px;border-radius:50%;background:#fff;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--border);transition:all .25s}
+.sbtn.active .sc{background:var(--pk);color:#fff;border-color:var(--pk);box-shadow:0 2px 8px rgba(255,100,150,.3)}
+.sbtn.done .sc{background:var(--gr);color:#fff;border-color:var(--gr)}
+.sl{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
+.sbtn.active .sl{color:var(--pk);font-weight:700}
+.scon{flex:0 0 18px;height:2px;background:var(--border);margin-top:16px;border-radius:2px}
+.page{display:none;padding:0 14px;position:relative;z-index:1}
+.page.active{display:block}
+.card{background:rgba(255,255,255,.95);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1.5px solid rgba(255,180,200,.3);box-shadow:0 4px 16px rgba(255,100,150,.08)}
+.ct{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:14px;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;transition:transform .12s,opacity .15s;-webkit-appearance:none;outline:none}
+.btn:active{transform:scale(.96);opacity:.85}
+.btn+.btn{margin-top:8px}
+.btn:disabled{opacity:.35;cursor:default}
+.btn-p{background:linear-gradient(135deg,#FF8FAB,#FF6B9D);color:#fff;box-shadow:0 4px 14px rgba(255,100,150,.28)}
+.btn-g{background:linear-gradient(135deg,#66BB6A,#43A047);color:#fff;box-shadow:0 4px 14px rgba(76,175,80,.28)}
+.btn-y{background:linear-gradient(135deg,#FFD54F,#FFB300);color:#5D4037;box-shadow:0 4px 14px rgba(255,200,0,.22)}
+.btn-o{background:#fff;border:2px solid var(--pk);color:var(--pk);padding:12px}
+.btn-o.d{border-color:#EF5350;color:#EF5350}
+.btn-sm{width:auto;padding:7px 13px;font-size:12px;border-radius:9px}
+.btn-gh{background:rgba(255,255,255,.85);color:var(--ink);border:1.5px solid var(--border)}
+.btn-pu{background:linear-gradient(135deg,#CE93D8,#AB47BC);color:#fff;box-shadow:0 4px 14px rgba(171,71,188,.22)}
+input[type=text]{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--ink);background:#fff;outline:none;-webkit-appearance:none;transition:border-color .2s}
+input[type=text]:focus{border-color:var(--pk)}
+input[type=file]{display:none}
+.cl{display:flex;flex-direction:column;gap:8px}
+.ci{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.85);border-radius:14px;padding:9px 11px;border:2px solid transparent;transition:border-color .2s}
+.ci.hf{border-color:var(--gr);background:var(--gr3)}
+.ci.bsy{border-color:var(--bl);background:var(--bl3)}
+.cav{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;border:3px solid var(--pk3)}
+.cav.e{display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--pk4);border-color:var(--pk3)}
+.cin{flex:1;min-width:0}
+.cnm{font-size:14px;font-weight:700}
+.cst{font-size:11px;color:var(--muted);margin-top:1px}
+.cst.ok{color:#388E3C}
+.cac{display:flex;gap:5px;flex-shrink:0}
+.ib{width:30px;height:30px;border-radius:9px;border:1.5px solid var(--pk3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--pk4);outline:none}
+.ib.d{background:#FFEBEE;border-color:#FFCDD2}
+.af{display:flex;gap:8px;margin-bottom:11px}
+.af input{flex:1}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px}
+.pt{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#BBDEFB;cursor:pointer}
+.pt img{width:100%;height:100%;object-fit:cover;display:block}
+.pt .bg{position:absolute;bottom:2px;left:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;padding:2px 4px;border-radius:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt .bg.f{background:rgba(239,83,80,.8)}
+.pt .bg.m{background:rgba(103,58,183,.8)}
+.sd{position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;border:2px solid #fff}
+.sd.ok{background:var(--gr)}
+.sd.f{background:#EF5350}
+.sd.p{background:var(--ye)}
+.sd.b{background:var(--bl);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.rmb{position:absolute;top:3px;left:3px;background:rgba(0,0,0,.4);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pb{height:6px;background:var(--pk3);border-radius:3px;overflow:hidden;margin-top:6px}
+.pf{height:100%;background:linear-gradient(90deg,var(--pk),var(--ye));border-radius:3px;transition:width .4s ease}
+.info{background:var(--bl3);border-radius:var(--rs);padding:11px 13px;margin-bottom:10px;border-left:3px solid var(--bl);font-size:12px;color:#0D47A1;line-height:1.6}
+.warn{background:var(--ye2);border-left-color:var(--or);color:#4E342E}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sb{background:rgba(255,255,255,.9);border-radius:14px;padding:12px 6px;text-align:center;border:1.5px solid var(--border)}
+.sn{font-size:22px;font-weight:800;color:var(--pk)}
+.sl2{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600}
+#rm{position:fixed;inset:0;background:rgba(30,10,20,.94);z-index:9010;display:none;flex-direction:column}
+#rm.show{display:flex}
+.rmh{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.rmt{color:#fff;font-size:16px;font-weight:800}
+.rmc{background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;outline:none}
+.rmtabs{display:flex;padding:0 16px 10px;gap:7px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.rmtabs::-webkit-scrollbar{display:none}
+.rmtab{flex-shrink:0;padding:6px 13px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.12);color:rgba(255,255,255,.65);outline:none}
+.rmtab.a{background:var(--pk);color:#fff}
+.rmtab .cnt{background:rgba(255,255,255,.2);border-radius:10px;padding:1px 6px;margin-left:4px;font-size:10px}
+.rmc2{flex:1;overflow-y:auto;padding:0 14px 20px;-webkit-overflow-scrolling:touch}
+.rmpg{display:grid;grid-template-columns:repeat(var(--rmpg-cols,3),1fr);gap:var(--rmpg-gap,5px)}
+.rmpt{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#333;cursor:pointer}
+.rmpt img{width:100%;height:100%;object-fit:cover;display:block}
+.rmbg{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;padding:3px;text-align:center}
+#fp{position:fixed;inset:0;background:#000;z-index:9020;display:none;flex-direction:column;align-items:center;justify-content:center}
+#fp.show{display:flex}
+#fp img{max-width:100%;max-height:88vh;object-fit:contain}
+#fp .fpc{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.18);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;outline:none}
+#fp .fpi{position:absolute;bottom:20px;left:0;right:0;text-align:center;color:rgba(255,255,255,.85);font-size:13px;padding:8px 16px;background:rgba(0,0,0,.45);font-weight:600}
+.rcs{margin-bottom:14px}
+.rch{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+.rcn{font-size:14px;font-weight:800}
+.rcc{font-size:11px;color:var(--muted);background:var(--pk4);border-radius:20px;padding:2px 9px;border:1px solid var(--pk3);font-weight:600}
+.sv{display:flex;gap:6px;margin-top:8px}
+.dv{height:1px;background:var(--border);margin:12px 0}
+.es{text-align:center;padding:20px 10px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:6px}
+.es .bi{font-size:38px;opacity:.5}
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#2D2D2D;color:#fff;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9999;white-space:nowrap;max-width:92vw;text-align:center}
+#toast.show{opacity:1}
+#ld{position:fixed;inset:0;background:rgba(255,248,251,.93);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9005;gap:12px}
+#ld.show{display:flex}
+.sp{width:48px;height:48px;border:4px solid var(--pk3);border-top-color:var(--pk);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#lm{font-size:15px;font-weight:700;color:var(--pk)}
+#ls{font-size:12px;color:var(--muted)}
+.lpb{width:220px;height:6px;background:var(--pk3);border-radius:3px;overflow:hidden}
+.lpf{height:100%;background:linear-gradient(90deg,var(--pk),var(--ye));border-radius:3px;transition:width .3s}
+
+.rmpt-wrap{position:relative;border-radius:8px;overflow:hidden;background:#333;aspect-ratio:1}
+.rmpt-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.rmpt-wrap .rmbg{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;padding:3px;text-align:center}
+.rmpt-wrap.dismissed{opacity:.35}
+.rmpt-wrap.dismissed::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;background:rgba(180,0,0,.45);font-weight:900}
+.rmpt-wrap .act-row{position:absolute;top:4px;right:4px;display:flex;gap:3px}
+.rmpt-wrap .abtn{width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:.9}
+.rmpt-wrap .abtn.ok{background:#66BB6A;color:#fff}
+.rmpt-wrap .abtn.no{background:#EF5350;color:#fff}
+.rmpt-wrap.accepted .abtn.ok{opacity:1;box-shadow:0 0 0 2px #fff}
+.rmpt-wrap.dismissed .abtn.no{opacity:1;box-shadow:0 0 0 2px #fff}
+#assign-modal{position:fixed;inset:0;background:rgba(30,10,20,.95);z-index:9030;display:none;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:0}
+#assign-modal.show{display:flex}
+.assign-sheet{background:var(--bg);border-radius:22px 22px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.assign-header{padding:16px 18px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.assign-title{font-size:15px;font-weight:800;color:var(--ink)}
+.assign-close{background:var(--pk4);border:none;color:var(--pk);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;outline:none}
+.assign-preview{width:100%;max-height:200px;object-fit:contain;background:#111;flex-shrink:0}
+.assign-body{padding:14px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+.assign-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px}
+.assign-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.aitem{background:rgba(255,255,255,.85);border-radius:12px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;border:2px solid transparent;cursor:pointer;transition:border-color .15s,background .15s}
+.aitem:active{transform:scale(.96)}
+.aitem.selected{border-color:var(--pk);background:var(--pk4)}
+.aitem .aico{font-size:22px}
+.aitem .anm{font-size:11px;font-weight:700;text-align:center;color:var(--ink)}
+.assign-actions{padding:12px 14px 28px;display:flex;gap:8px;flex-shrink:0;border-top:1px solid var(--border)}
+
+.size-bar{display:flex;align-items:center;gap:6px;padding:0 16px 10px;flex-shrink:0}
+.size-label{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;margin-right:2px}
+.szbtn{flex:1;padding:7px 4px;border:none;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6);outline:none;transition:background .15s}
+.szbtn.a{background:var(--pk);color:#fff}
+
+#save-notice{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9040;display:none;align-items:flex-end;justify-content:center;padding-bottom:0}
+#save-notice.show{display:flex}
+.sn-sheet{background:var(--bg);border-radius:22px 22px 0 0;width:100%;padding:20px 20px 36px;max-width:480px}
+.sn-ico{font-size:36px;text-align:center;margin-bottom:10px}
+.sn-title{font-size:16px;font-weight:800;color:var(--ink);text-align:center;margin-bottom:6px}
+.sn-body{font-size:13px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:16px}
+.sn-path{background:rgba(255,255,255,.9);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px 14px;font-size:12px;color:var(--ink);line-height:1.7;margin-bottom:16px}
+.sn-path strong{color:var(--pk);display:block;margin-bottom:3px;font-size:13px}
+canvas{display:none}
+</style>
+</head>
+<body>
+
+<div class="deco" style="top:4%;left:3%">🌸</div>
+<div class="deco" style="top:6%;right:4%">⭐</div>
+<div class="deco" style="top:22%;left:91%">🎀</div>
+<div class="deco" style="top:35%;left:2%">🌈</div>
+<div class="deco" style="top:54%;left:93%">🍭</div>
+<div class="deco" style="top:70%;left:3%">🎈</div>
+<div class="deco" style="top:82%;left:88%">🌻</div>
+<div class="deco" style="top:92%;left:7%">🦋</div>
+
+<div id="mstatus">🔄 AI 얼굴인식 모델 로딩 중… 잠시만요!</div>
+
+<div class="hdr">
+  <div class="hdr-in">
+    <div>
+      <div class="hico">🏫✨</div>
+      <h1>어린이집 사진 분류기</h1>
+      <p>얼굴 인식으로 아이별 사진을 자동 정리해요</p>
+    </div>
+    <div><div class="made-by">Made by Gwangsu</div></div>
+  </div>
+</div>
+
+<div class="steps">
+  <button class="sbtn active" id="sb1"><div class="sc">1</div><span class="sl">아이등록</span></button>
+  <div class="scon"></div>
+  <button class="sbtn" id="sb2" disabled><div class="sc">2</div><span class="sl">얼굴학습</span></button>
+  <div class="scon"></div>
+  <button class="sbtn" id="sb3" disabled><div class="sc">3</div><span class="sl">사진분류</span></button>
+  <div class="scon"></div>
+  <button class="sbtn" id="sb4" disabled><div class="sc">4</div><span class="sl">검토·저장</span></button>
+</div>
+
+<div class="page active" id="pg1">
+  <div class="card">
+    <div class="ct">👶 아이 이름 등록</div>
+    <div class="info">이름을 한 명씩 추가하세요. 최대 20명 가능해요.</div>
+    <div class="af">
+      <input type="text" id="cni" placeholder="예: 김민준" maxlength="10">
+      <button class="btn btn-p btn-sm" id="bAdd">추가</button>
+    </div>
+    <div class="cl" id="cl"><div class="es"><div class="bi">👶</div><span>아직 등록된 아이가 없어요</span></div></div>
+    <div id="p1p" style="display:none;margin-top:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;color:var(--muted);font-weight:600">등록된 아이</span>
+        <span id="ccnt" style="font-size:12px;font-weight:800;color:var(--pk)">0명</span>
+      </div>
+      <div class="pb"><div class="pf" id="cpf" style="width:0%"></div></div>
+    </div>
+  </div>
+  <button class="btn btn-p" id="b12" disabled>다음: 얼굴 학습하기 →</button>
+  <button class="btn btn-gh" id="bSamp" style="margin-top:8px">📋 샘플 14명 추가 (테스트용)</button>
+</div>
+
+<div class="page" id="pg2">
+  <div class="card">
+    <div class="ct">📸 아이별 얼굴 사진 등록</div>
+    <div class="info">각 아이의 <strong>정면 얼굴</strong>이 잘 보이는 사진을 선택하세요. 여러 장 등록할수록 인식률이 높아져요!</div>
+    <div class="cl" id="frl"></div>
+  </div>
+  <div class="card" id="rcard" style="display:none">
+    <div class="ct">✅ 등록 현황</div>
+    <div id="rtxt" style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600"></div>
+    <div class="pb"><div class="pf" id="rfill" style="width:0%"></div></div>
+  </div>
+  <button class="btn btn-p" id="b23" disabled>다음: 사진 분류하기 →</button>
+  <button class="btn btn-o" id="b21" style="margin-top:8px">← 이전으로</button>
+</div>
+
+<div class="page" id="pg3">
+  <div class="card">
+    <div class="ct">🗂 분류할 사진 선택</div>
+    <div class="info">아이들이 찍힌 사진을 여러 장 선택하세요. 한 사진에 여러 아이가 있으면 <strong>중복 분류</strong>돼요.</div>
+    <button class="btn btn-y" id="bPick">📷 사진 선택하기 (여러 장 동시 가능)</button>
+    <input type="file" id="spi" accept="image/*" multiple>
+    <div id="sgrid" class="pg" style="display:none"></div>
+    <div id="scnt" style="font-size:12px;color:var(--muted);margin-top:8px;display:none;font-weight:600"></div>
+  </div>
+  <button class="btn btn-g" id="bSort" disabled>🔍 얼굴 인식 시작하기</button>
+  <button class="btn btn-o" id="b32" style="margin-top:8px">← 이전으로</button>
+</div>
+
+<div class="page" id="pg4">
+  <div class="card">
+    <div class="ct">🎉 분류 완료!</div>
+    <div class="stats" id="rstats"></div>
+    <div class="info warn">💡 <strong>검토하기</strong>를 눌러 분류 결과를 확인한 후 저장하세요.</div>
+  </div>
+  <button class="btn btn-pu" id="bRevAll" style="margin-bottom:10px">🔎 전체 분류 결과 검토하기</button>
+  <div class="card">
+    <div class="ct">📂 아이별 저장</div>
+    <div id="rbc"></div>
+  </div>
+  <div class="card" id="ucard" style="display:none">
+    <div class="ct">❓ 인식 실패 사진</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">얼굴을 찾지 못하거나 등록된 아이와 매칭이 안 된 사진이에요.</div>
+    <div class="pg" id="umg"></div>
+    <button class="btn btn-gh btn-sm" id="bRevUm" style="margin-top:10px;width:auto">🔎 인식 실패 사진 검토</button>
+  </div>
+  <button class="btn btn-p" id="bDl" style="margin-top:4px">💾 전체 ZIP으로 저장하기</button>
+  <button class="btn btn-o" id="b43" style="margin-top:8px">← 사진 다시 선택</button>
+  <button class="btn btn-o d" id="bReset" style="margin-top:8px">🔄 처음부터 다시 시작</button>
+</div>
+
+<div id="rm">
+  <div class="rmh"><div class="rmt">분류 결과 검토</div><button class="rmc" id="bRmc">✕</button></div>
+  <div class="rmtabs" id="rmtabs"></div>
+  <div class="size-bar">
+    <span class="size-label">보기:</span>
+    <button class="szbtn" id="szS" onclick="setSize('S')">작게 (20개)</button>
+    <button class="szbtn a" id="szM" onclick="setSize('M')">보통 (9개)</button>
+    <button class="szbtn" id="szL" onclick="setSize('L')">크게 (4개)</button>
+  </div>
+  <div class="rmc2"><div class="rmpg" id="rmgrid"></div></div>
+</div>
+
+<div id="fp">
+  <img id="fpimg" src="" alt="">
+  <button class="fpc" id="bFpc">✕</button>
+  <div class="fpi" id="fpinfo"></div>
+</div>
+
+
+<div id="assign-modal">
+  <div class="assign-sheet">
+    <div class="assign-header">
+      <div class="assign-title">📂 이 사진 직접 분류하기</div>
+      <button class="assign-close" id="bAsc">✕</button>
+    </div>
+    <img class="assign-preview" id="assign-prev" src="" alt="">
+    <div class="assign-body">
+      <div class="assign-label">어느 아이 사진인가요? (중복 선택 가능)</div>
+      <div class="assign-grid" id="assign-grid"></div>
+    </div>
+    <div class="assign-actions">
+      <button class="btn btn-o" id="bAscCancel" style="flex:1">취소</button>
+      <button class="btn btn-p" id="bAscConfirm" style="flex:2">✅ 이 아이들 폴더에 추가</button>
+    </div>
+  </div>
+</div>
+
+<div id="save-notice">
+  <div class="sn-sheet">
+    <div class="sn-ico">📥</div>
+    <div class="sn-title" id="sn-title">저장 완료!</div>
+    <div class="sn-body" id="sn-body"></div>
+    <div class="sn-path" id="sn-path"></div>
+    <button class="btn btn-p" onclick="G('save-notice').classList.remove('show')">확인</button>
+  </div>
+</div>
+<canvas id="mc"></canvas>
+<div id="toast"></div>
+<div id="ld">
+  <div style="font-size:44px">🔍</div>
+  <div class="sp"></div>
+  <div id="lm">처리 중…</div>
+  <div id="ls"></div>
+  <div class="lpb"><div class="lpf" id="lpf2" style="width:0%"></div></div>
+</div>
+
+<script>
+var CH=[],PH=[],RES={},ML=false,CP=1,TT,RTabs=[];
+var MU='https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+var THR=0.52;
+var AV=['🐰','🐻','🦊','🐼','🐸','🐱','🐶','🐨','🐯','🦁','🐮','🐷','🐹','🦝','🐧','🐥'];
+
+function G(id){return document.getElementById(id);}
+
+window.addEventListener('DOMContentLoaded',function(){
+  loadS();renderCL();renderFL();updNav();bind();
+  var ms=G('mstatus');ms.classList.add('show');
+  Promise.all([
+    faceapi.nets.ssdMobilenetv1.loadFromUri(MU),
+    faceapi.nets.faceLandmark68Net.loadFromUri(MU),
+    faceapi.nets.faceRecognitionNet.loadFromUri(MU)
+  ]).then(function(){
+    ML=true;ms.textContent='✅ AI 얼굴인식 준비 완료!';
+    setTimeout(function(){ms.classList.remove('show');},2200);
+  }).catch(function(e){
+    ms.textContent='⚠️ 모델 로딩 실패 — 인터넷 연결을 확인하세요';console.error(e);
+  });
+});
+
+function bind(){
+  G('bAdd').onclick=addC;
+  G('cni').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();addC();}};
+  G('b12').onclick=function(){gP(2);};
+  G('bSamp').onclick=addSamp;
+  G('b23').onclick=function(){gP(3);};
+  G('b21').onclick=function(){gP(1);};
+  G('bPick').onclick=function(){G('spi').click();};
+  G('spi').onchange=loadPH;
+  G('bSort').onclick=startSort;
+  G('b32').onclick=function(){gP(2);};
+  G('bRevAll').onclick=function(){openRev('all');};
+  G('bRevUm').onclick=function(){openRev('unmatched');};
+  G('bDl').onclick=dlAll;
+  G('b43').onclick=function(){gP(3);};
+  G('bReset').onclick=resetAll;
+  G('bRmc').onclick=closeRev;
+  G('bFpc').onclick=closeFP;
+  for(var i=1;i<=4;i++){(function(n){G('sb'+n).onclick=function(){gP(n);};})(i);}
+  G('bAsc').onclick=closeAssign;
+  G('bAscCancel').onclick=closeAssign;
+  G('bAscConfirm').onclick=confirmAssign;
+}
+
+function saveS(){try{localStorage.setItem('dc4',JSON.stringify(CH.map(function(c){return{id:c.id,name:c.name,th:c.th,desc:c.desc.map(function(d){return Array.from(d);})};})));}catch(e){}}
+function loadS(){try{var r=localStorage.getItem('dc4');if(!r)return;CH=JSON.parse(r).map(function(c){return{id:c.id,name:c.name,th:c.th,desc:c.desc.map(function(d){return new Float32Array(d);})};});}catch(e){}}
+
+function gP(n){
+  if(n===2&&!CH.length){toast('먼저 아이를 등록하세요 👶');return;}
+  if(n===3&&!CH.some(function(c){return c.desc.length>0;})){toast('최소 1명 얼굴을 등록하세요 📸');return;}
+  if(n===4&&!Object.keys(RES).length){toast('먼저 분류를 실행하세요 🔍');return;}
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  G('pg'+n).classList.add('active');CP=n;updNav();window.scrollTo(0,0);
+}
+function updNav(){
+  var hc=CH.length>0,hf=CH.some(function(c){return c.desc.length>0;}),hr=Object.keys(RES).length>0;
+  for(var i=1;i<=4;i++){
+    var b=G('sb'+i);b.classList.remove('active','done');
+    if(i<CP)b.classList.add('done');else if(i===CP)b.classList.add('active');
+    b.disabled=(i===2&&!hc)||(i===3&&!hf)||(i===4&&!hr);
+  }
+  G('b12').disabled=!hc;G('b23').disabled=!hf;
+}
+
+function addC(){
+  var inp=G('cni'),n=inp.value.trim();
+  if(!n){toast('이름을 입력하세요');return;}
+  if(CH.find(function(c){return c.name===n;})){toast('이미 등록된 이름이에요');return;}
+  if(CH.length>=20){toast('최대 20명까지 가능해요');return;}
+  CH.push({id:Date.now()+Math.floor(Math.random()*9999),name:n,desc:[],th:null});
+  inp.value='';saveS();renderCL();renderFL();updNav();
+}
+function rmC(id){if(!confirm('이 아이를 삭제할까요?'))return;CH=CH.filter(function(c){return c.id!==id;});saveS();renderCL();renderFL();updNav();}
+function renderCL(){
+  var el=G('cl'),prog=G('p1p');
+  if(!CH.length){el.innerHTML='<div class="es"><div class="bi">👶</div><span>아직 등록된 아이가 없어요</span></div>';prog.style.display='none';return;}
+  prog.style.display='block';
+  G('ccnt').textContent=CH.length+'명';
+  G('cpf').style.width=Math.min(CH.length/14*100,100)+'%';
+  el.innerHTML=CH.map(function(c,i){
+    return '<div class="ci '+(c.desc.length>0?'hf':'')+'">'+
+      (c.th?'<img class="cav" src="'+c.th+'">'
+        :'<div class="cav e">'+AV[i%AV.length]+'</div>')+
+      '<div class="cin"><div class="cnm">'+c.name+'</div>'+
+      '<div class="cst '+(c.desc.length>0?'ok':'')+'">'+
+      (c.desc.length>0?'✅ 얼굴 '+c.desc.length+'장':'얼굴 미등록')+'</div></div>'+
+      '<div class="cac"><button class="ib d" data-r="'+c.id+'">🗑</button></div></div>';
+  }).join('');
+  el.querySelectorAll('[data-r]').forEach(function(b){b.onclick=function(){rmC(Number(b.getAttribute('data-r')));};});
+}
+function addSamp(){
+  ['김민준','이서연','박도윤','최하은','정시우','강지아','조은우','임하늘','한서준','오나연','신민서','류준혁','이채원','박이준'].forEach(function(n){
+    if(!CH.find(function(c){return c.name===n;})&&CH.length<20)CH.push({id:Date.now()+Math.floor(Math.random()*9999),name:n,desc:[],th:null});
+  });
+  saveS();renderCL();renderFL();updNav();toast('14명 추가됐어요! 🎉');
+}
+
+function renderFL(){
+  var el=G('frl');if(!el)return;
+  if(!CH.length){el.innerHTML='<div class="es"><div class="bi">📸</div><span>1단계에서 아이를 먼저 등록하세요</span></div>';return;}
+  el.innerHTML=CH.map(function(c,i){
+    return '<div class="ci '+(c.desc.length>0?'hf':'')+'" id="fr'+c.id+'">'+
+      (c.th?'<img class="cav" src="'+c.th+'">'
+        :'<div class="cav e">'+AV[i%AV.length]+'</div>')+
+      '<div class="cin"><div class="cnm">'+c.name+'</div>'+
+      '<div class="cst '+(c.desc.length>0?'ok':'')+'" id="frs'+c.id+'">'+
+      (c.desc.length>0?'✅ '+c.desc.length+'장 등록됨':'사진을 추가하세요')+'</div></div>'+
+      '<div class="cac">'+
+      '<button class="ib" data-t="'+c.id+'">📷</button>'+
+      (c.desc.length>0?'<button class="ib d" data-c="'+c.id+'">✕</button>':'')+
+      '</div></div>'+
+      '<input type="file" id="ff'+c.id+'" accept="image/*" multiple>';
+  }).join('');
+  CH.forEach(function(c){
+    var tb=el.querySelector('[data-t="'+c.id+'"]');
+    if(tb)tb.onclick=function(){trigR(c.id);};
+    var cb=el.querySelector('[data-c="'+c.id+'"]');
+    if(cb)cb.onclick=function(){clrF(c.id);};
+    var fi=G('ff'+c.id);
+    if(fi)fi.onchange=(function(cid){return function(e){regF(e,cid);};})(c.id);
+  });
+  updRS();
+}
+function trigR(id){if(!ML){toast('모델 로딩 중이에요. 잠시 후 시도하세요');return;}var el=G('ff'+id);if(el)el.click();}
+function clrF(id){var c=CH.find(function(x){return x.id===id;});if(!c)return;c.desc=[];c.th=null;saveS();renderFL();renderCL();}
+function regF(e,id){
+  var files=Array.from(e.target.files);if(!files.length)return;
+  var c=CH.find(function(x){return x.id===id;});if(!c)return;
+  var item=G('fr'+id);if(item)item.classList.add('bsy');
+  var pc=c.desc.length;
+  showLD(c.name+' 얼굴 학습 중…','0 / '+files.length);
+  var idx=0;
+  function nx(){
+    if(idx>=files.length){
+      if(item)item.classList.remove('bsy');e.target.value='';
+      hideLD();var added=c.desc.length-pc;
+      toast(added?c.name+': '+added+'장 등록 완료! 🎉':'얼굴을 찾지 못했어요. 정면 사진으로 시도하세요');
+      saveS();renderFL();renderCL();updRS();return;
+    }
+    updS((idx+1)+' / '+files.length+' 처리 중');updP((idx+1)/files.length*100);
+    fImg(files[idx]).then(function(img){
+      return faceapi.detectSingleFace(img,new faceapi.SsdMobilenetv1Options({minConfidence:0.4}))
+        .withFaceLandmarks().withFaceDescriptor();
+    }).then(function(det){
+      if(det){c.desc.push(det.descriptor);if(!c.th)return fURL(files[idx]).then(function(u){c.th=u;});}
+    }).catch(function(err){console.warn(err);}).then(function(){idx++;setTimeout(nx,10);});
+  }nx();
+}
+function updRS(){
+  var reg=CH.filter(function(c){return c.desc.length>0;}).length,tot=CH.length;
+  var card=G('rcard');if(!tot){if(card)card.style.display='none';return;}
+  card.style.display='block';
+  G('rtxt').textContent=tot+'명 중 '+reg+'명 얼굴 등록 완료';
+  G('rfill').style.width=(reg/tot*100)+'%';
+  G('b23').disabled=!reg;updNav();
+}
+
+function loadPH(e){
+  var files=Array.from(e.target.files);if(!files.length)return;
+  PH=files.map(function(f){return{file:f,url:URL.createObjectURL(f),matched:[]};});
+  var g=G('sgrid'),c=G('scnt');g.style.display='grid';c.style.display='block';
+  c.textContent='📷 '+PH.length+'장 선택됨';
+  g.innerHTML=PH.map(function(p,i){
+    return '<div class="pt"><img src="'+p.url+'" loading="lazy">'+
+      '<div class="sd p" id="sd'+i+'"></div>'+
+      '<button class="rmb" data-ri="'+i+'">✕</button></div>';
+  }).join('');
+  g.querySelectorAll('[data-ri]').forEach(function(b){b.onclick=function(){rmP(Number(b.getAttribute('data-ri')));};});
+  G('bSort').disabled=false;e.target.value='';
+}
+function rmP(i){
+  PH.splice(i,1);var g=G('sgrid'),c=G('scnt');
+  if(!PH.length){g.style.display='none';c.style.display='none';G('bSort').disabled=true;return;}
+  c.textContent='📷 '+PH.length+'장 선택됨';
+  g.innerHTML=PH.map(function(p,idx){
+    return '<div class="pt"><img src="'+p.url+'" loading="lazy">'+
+      '<div class="sd p" id="sd'+idx+'"></div>'+
+      '<button class="rmb" data-ri="'+idx+'">✕</button></div>';
+  }).join('');
+  g.querySelectorAll('[data-ri]').forEach(function(b){b.onclick=function(){rmP(Number(b.getAttribute('data-ri')));};});
+}
+
+function startSort(){
+  if(!ML){toast('AI 모델 아직 로딩 중이에요');return;}
+  var rc=CH.filter(function(c){return c.desc.length>0;});if(!rc.length){toast('등록된 얼굴이 없어요');return;}
+  RES={};CH.forEach(function(c){RES[c.id]=[];});RES.unmatched=[];
+  PH.forEach(function(p){p.matched=[];});
+  showLD('얼굴 인식 중…','0 / '+PH.length);
+  var idx=0;
+  function nx(){
+    if(idx>=PH.length){
+      hideLD();toast('분류 완료! 검토 후 저장하세요 🎉');renderRes();gP(4);return;
+    }
+    var d=G('sd'+idx);if(d)d.className='sd b';
+    updS((idx+1)+' / '+PH.length+' 분석 중');updP((idx+1)/PH.length*100);
+    var i=idx;
+    fImg(PH[i].file).then(function(img){
+      return faceapi.detectAllFaces(img,new faceapi.SsdMobilenetv1Options({minConfidence:0.38}))
+        .withFaceLandmarks().withFaceDescriptors();
+    }).then(function(dets){
+      var d2=G('sd'+i);
+      if(!dets||!dets.length){RES.unmatched.push(i);if(d2)d2.className='sd f';return;}
+      var m={};
+      dets.forEach(function(det){
+        var bId=null,bD=1;
+        rc.forEach(function(c){c.desc.forEach(function(desc){var dv=faceapi.euclideanDistance(det.descriptor,desc);if(dv<bD){bD=dv;bId=c.id;}});});
+        if(bId&&bD<THR)m[bId]=true;
+      });
+      var ks=Object.keys(m);
+      if(ks.length){
+        ks.forEach(function(cid){if(!RES[cid])RES[cid]=[];if(RES[cid].indexOf(i)<0)RES[cid].push(i);PH[i].matched.push(Number(cid));});
+        if(d2)d2.className='sd ok';
+      }else{RES.unmatched.push(i);if(d2)d2.className='sd f';}
+    }).catch(function(err){
+      console.warn(err);var d2=G('sd'+i);RES.unmatched.push(i);if(d2)d2.className='sd f';
+    }).then(function(){idx++;setTimeout(nx,20);});
+  }nx();
+}
+
+function renderRes(){
+  var tot=PH.length,ms={},um=(RES.unmatched||[]).length;
+  CH.forEach(function(c){(RES[c.id]||[]).forEach(function(i){ms[i]=1;});});
+  G('rstats').innerHTML=
+    '<div class="sb"><div class="sn">'+tot+'</div><div class="sl2">전체 사진</div></div>'+
+    '<div class="sb"><div class="sn" style="color:var(--gr)">'+Object.keys(ms).length+'</div><div class="sl2">분류 성공</div></div>'+
+    '<div class="sb"><div class="sn" style="color:#EF5350">'+um+'</div><div class="sl2">인식 실패</div></div>';
+  var rbc=G('rbc'),wp=CH.filter(function(c){return (RES[c.id]||[]).length>0;});
+  if(!wp.length){rbc.innerHTML='<div class="es"><div class="bi">😢</div><span>분류된 사진이 없어요</span></div>';}
+  else{
+    rbc.innerHTML=wp.map(function(c,ci){
+      var ix=RES[c.id]||[];
+      var pv=ix.slice(0,4).map(function(i){return '<div class="pt" data-fo="'+i+'"><img src="'+PH[i].url+'" loading="lazy">'+
+        (PH[i].matched.length>1?'<div class="bg m">+'+PH[i].matched.length+'명</div>':'')+
+        '</div>';}).join('');
+      var more=ix.length>4?'<div class="pt" style="background:var(--pk4)" data-rv="'+c.id+'">'+
+        '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--pk)">+'+(ix.length-4)+'장</div></div>':'';
+      return '<div class="rcs"><div class="rch">'+
+        '<div class="rcn">'+AV[ci%AV.length]+' '+c.name+'</div>'+
+        '<div class="rcc">'+ix.length+'장</div>'+
+        '<button class="btn btn-gh btn-sm" style="margin-left:auto" data-rv="'+c.id+'">🔎 검토</button></div>'+
+        '<div class="pg" style="grid-template-columns:repeat(4,1fr)">'+pv+more+'</div>'+
+        '<div class="sv"><button class="btn btn-p btn-sm" style="flex:1" data-sv="'+c.id+'">💾 이 아이 사진 저장</button></div>'+
+        '<div class="dv"></div></div>';
+    }).join('');
+    rbc.querySelectorAll('[data-fo]').forEach(function(el){el.onclick=function(){openFP(Number(el.getAttribute('data-fo')));};});
+    rbc.querySelectorAll('[data-rv]').forEach(function(el){el.onclick=function(){openRev(el.getAttribute('data-rv'));};});
+    rbc.querySelectorAll('[data-sv]').forEach(function(el){el.onclick=function(){saveCP(Number(el.getAttribute('data-sv')));};});
+  }
+  var uc=G('ucard'),umg=G('umg');
+  if(um>0){uc.style.display='block';
+    umg.innerHTML=(RES.unmatched||[]).map(function(i){return '<div class="pt" data-fo="'+i+'"><img src="'+PH[i].url+'" loading="lazy"><div class="bg f">미인식</div></div>';}).join('');
+    umg.querySelectorAll('[data-fo]').forEach(function(el){el.onclick=function(){openFP(Number(el.getAttribute('data-fo')));};});
+  }else uc.style.display='none';
+}
+
+function saveCP(cid){
+  var ix=RES[cid]||[];if(!ix.length){toast('저장할 사진이 없어요');return;}
+  var c=CH.find(function(x){return x.id===cid;}),n=0;
+  var dt=today();
+  function nx(){
+    if(n>=ix.length){
+      showSaveNotice(c.name, n, dt);
+      return;
+    }
+    bUrl(PH[ix[n]].file).then(function(url){
+      var a=document.createElement('a');a.href=url;
+      a.download=c.name+'_'+dt+'_'+String(n+1).padStart(3,'0')+'.'+fExt(PH[ix[n]].file);
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);},1000);n++;setTimeout(nx,350);
+    }).catch(function(){n++;setTimeout(nx,350);});
+  }
+  toast(c.name+' 사진 '+ix.length+'장 저장 중…');nx();
+}
+
+function openRev(id){
+  var tabs=[];
+  if(id==='all')tabs.push({id:'all',label:'전체',ix:PH.map(function(_,i){return i;})});
+  CH.filter(function(c){return (RES[c.id]||[]).length>0;}).forEach(function(c){tabs.push({id:String(c.id),label:c.name,ix:RES[c.id]||[]});});
+  if((RES.unmatched||[]).length>0)tabs.push({id:'unmatched',label:'미인식',ix:RES.unmatched||[]});
+  if(!tabs.length){toast('검토할 사진이 없어요');return;}
+  RTabs=tabs;var initId=(id==='all'||id==='unmatched')?tabs[0].id:String(id);
+  var te=G('rmtabs');
+  te.innerHTML=tabs.map(function(t){return '<button class="rmtab '+(t.id===initId?'a':'')+'" data-tid="'+t.id+'">'+t.label+'<span class="cnt">'+t.ix.length+'</span></button>';}).join('');
+  te.querySelectorAll('[data-tid]').forEach(function(b){
+    b.onclick=function(){
+      te.querySelectorAll('.rmtab').forEach(function(x){x.classList.remove('a');});
+      b.classList.add('a');
+      var tab=RTabs.find(function(t){return t.id===b.getAttribute('data-tid');});
+      if(tab)renderRG(tab);
+    };
+  });
+  renderRG(tabs.find(function(t){return t.id===initId;})||tabs[0]);
+  G('rm').classList.add('show');document.body.style.overflow='hidden';
+}
+var DISMISSED={};
+var CUR_TAB=null;
+function renderRG(tab){
+  CUR_TAB=tab;
+  var g=G('rmgrid');
+  if(!tab||!tab.ix.length){g.innerHTML='<p style="color:rgba(255,255,255,.4);text-align:center;padding:20px;grid-column:span 3">사진이 없어요</p>';return;}
+  g.innerHTML=tab.ix.map(function(i){
+    var p=PH[i];
+    var names=p.matched.map(function(cid){var c=CH.find(function(x){return x.id===cid;});return c?c.name:'?';}).join(', ')||'미인식';
+    var isDis=!!DISMISSED[tab.id+'_'+i];
+    var isUm=(tab.id==='unmatched');
+    return '<div class="rmpt-wrap'+(isDis?' dismissed':'')+'" id="rw_'+tab.id+'_'+i+'">'+
+      '<img src="'+p.url+'" loading="lazy">'+
+      '<div class="rmbg">'+names+'</div>'+
+      '<div class="act-row">'+
+        (isUm
+          ? '<button class="abtn ok" data-assign="'+i+'" title="분류하기">📂</button>'
+          : '<button class="abtn ok" data-acc="'+i+'" title="수락">✓</button>'+
+            '<button class="abtn no" data-dis="'+i+'" title="제거">✕</button>'
+        )+
+      '</div>'+
+    '</div>';
+  }).join('');
+  g.querySelectorAll('[data-acc]').forEach(function(el){
+    el.onclick=function(e){e.stopPropagation();acceptPhoto(tab,Number(el.getAttribute('data-acc')));};
+  });
+  g.querySelectorAll('[data-dis]').forEach(function(el){
+    el.onclick=function(e){e.stopPropagation();dismissPhoto(tab,Number(el.getAttribute('data-dis')));};
+  });
+  g.querySelectorAll('[data-assign]').forEach(function(el){
+    el.onclick=function(e){e.stopPropagation();openAssign(Number(el.getAttribute('data-assign')));};
+  });
+  g.querySelectorAll('.rmpt-wrap').forEach(function(el){
+    var i=Number((el.id||'').split('_').pop());
+    el.onclick=function(){openFP(i);};
+  });
+}
+function acceptPhoto(tab,i){
+  var key=tab.id+'_'+i;
+  delete DISMISSED[key];
+  var wrap=G('rw_'+tab.id+'_'+i);
+  if(wrap){wrap.classList.remove('dismissed');wrap.classList.add('accepted');}
+  toast('수락했어요 ✅');
+}
+function dismissPhoto(tab,i){
+  var key=tab.id+'_'+i;
+  DISMISSED[key]=true;
+  var wrap=G('rw_'+tab.id+'_'+i);
+  if(wrap)wrap.classList.add('dismissed');
+  // remove from RES
+  if(tab.id!=='all'&&tab.id!=='unmatched'){
+    var cid=Number(tab.id);
+    RES[cid]=(RES[cid]||[]).filter(function(x){return x!==i;});
+    PH[i].matched=PH[i].matched.filter(function(x){return x!==cid;});
+    if(!PH[i].matched.length&&RES.unmatched.indexOf(i)<0)RES.unmatched.push(i);
+  }
+  toast('제거했어요 ✕');
+}
+var ASSIGN_IDX=null, ASSIGN_SEL={};
+function openAssign(photoIdx){
+  ASSIGN_IDX=photoIdx; ASSIGN_SEL={};
+  G('assign-prev').src=PH[photoIdx].url;
+  var grid=G('assign-grid');
+  grid.innerHTML=CH.map(function(c,ci){
+    var alreadyIn=PH[photoIdx].matched.indexOf(c.id)>=0;
+    return '<div class="aitem'+(alreadyIn?' selected':'')+'" data-cid="'+c.id+'">'+
+      '<div class="aico">'+AV[ci%AV.length]+'</div>'+
+      '<div class="anm">'+c.name+'</div>'+
+    '</div>';
+  }).join('');
+  if(CH.length===0){grid.innerHTML='<p style="color:var(--muted);font-size:12px;grid-column:span 3;text-align:center;padding:10px">등록된 아이가 없어요</p>';}
+  // pre-select already matched
+  PH[photoIdx].matched.forEach(function(cid){ASSIGN_SEL[cid]=true;});
+  grid.querySelectorAll('[data-cid]').forEach(function(el){
+    var cid=Number(el.getAttribute('data-cid'));
+    if(ASSIGN_SEL[cid])el.classList.add('selected');
+    el.onclick=function(){
+      if(ASSIGN_SEL[cid]){delete ASSIGN_SEL[cid];el.classList.remove('selected');}
+      else{ASSIGN_SEL[cid]=true;el.classList.add('selected');}
+    };
+  });
+  G('assign-modal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeAssign(){G('assign-modal').classList.remove('show');document.body.style.overflow='';}
+function confirmAssign(){
+  if(ASSIGN_IDX===null)return;
+  var i=ASSIGN_IDX;
+  var selIds=Object.keys(ASSIGN_SEL).map(Number).filter(function(x){return ASSIGN_SEL[x];});
+  if(!selIds.length){toast('아이를 선택해주세요');return;}
+  // remove from unmatched
+  RES.unmatched=(RES.unmatched||[]).filter(function(x){return x!==i;});
+  // clear old matched for this photo
+  PH[i].matched.forEach(function(cid){
+    RES[cid]=(RES[cid]||[]).filter(function(x){return x!==i;});
+  });
+  PH[i].matched=[];
+  // add to selected children
+  selIds.forEach(function(cid){
+    if(!RES[cid])RES[cid]=[];
+    if(RES[cid].indexOf(i)<0)RES[cid].push(i);
+    PH[i].matched.push(cid);
+  });
+  var names=selIds.map(function(cid){var c=CH.find(function(x){return x.id===cid;});return c?c.name:'?';}).join(', ');
+  toast(names+' 폴더에 추가됐어요! 🎉');
+  closeAssign();
+  // refresh review if open
+  if(CUR_TAB)renderRG(CUR_TAB);
+  // refresh results page
+  renderRes();
+}
+var SIZE_COLS={'S':5,'M':3,'L':2};
+var SIZE_GAP={'S':3,'M':5,'L':6};
+var CUR_SIZE='M';
+function setSize(s){
+  CUR_SIZE=s;
+  var rm=G('rm');
+  rm.style.setProperty('--rmpg-cols', SIZE_COLS[s]);
+  rm.style.setProperty('--rmpg-gap', SIZE_GAP[s]+'px');
+  ['S','M','L'].forEach(function(x){
+    var b=G('sz'+x);
+    if(b){b.classList.toggle('a',x===s);}
+  });
+}
+function closeRev(){G('rm').classList.remove('show');document.body.style.overflow='';}
+function openFP(i){var p=PH[i];G('fpimg').src=p.url;var n=p.matched.map(function(cid){var c=CH.find(function(x){return x.id===cid;});return c?c.name:'?';}).join(', ')||'인식 실패';G('fpinfo').textContent='📂 '+n+'  ·  '+(i+1)+'/'+PH.length+'장';G('fp').classList.add('show');}
+function closeFP(){G('fp').classList.remove('show');}
+
+function dlAll(){
+  showLD('ZIP 생성 중…','폴더 구조 만드는 중');
+  var zip=new JSZip(),wp=CH.filter(function(c){return (RES[c.id]||[]).length>0;}),ci=0;
+  function dC(){
+    if(ci>=wp.length){dU();return;}
+    var c=wp[ci],ix=RES[c.id]||[],fld=zip.folder(c.name),pi=0;
+    function dP(){if(pi>=ix.length){ci++;dC();return;}
+      updS(c.name+' '+(pi+1)+'/'+ix.length);
+      fBlob(PH[ix[pi]].file).then(function(blob){
+        fld.file(c.name+'_'+String(pi+1).padStart(3,'0')+'.'+fExt(PH[ix[pi]].file),blob);pi++;setTimeout(dP,5);
+      }).catch(function(){pi++;setTimeout(dP,5);});
+    }dP();
+  }
+  function dU(){var um=RES.unmatched||[];if(!um.length){gen();return;}
+    var fld=zip.folder('미인식_사진'),ui=0;
+    function dUi(){if(ui>=um.length){gen();return;}
+      fBlob(PH[um[ui]].file).then(function(blob){
+        fld.file('미인식_'+String(ui+1).padStart(3,'0')+'.'+fExt(PH[um[ui]].file),blob);ui++;setTimeout(dUi,5);
+      }).catch(function(){ui++;setTimeout(dUi,5);});
+    }dUi();
+  }
+  function gen(){
+    updS('ZIP 압축 중…');
+    zip.generateAsync({type:'blob',compression:'STORE'}).then(function(blob){
+      var url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='어린이집사진_'+today()+'.zip';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      hideLD();
+    var dt2=today();
+    showSaveNotice('전체 ZIP', null, dt2);
+    }).catch(function(e){hideLD();toast('다운로드 오류');console.error(e);});
+  }dC();
+}
+function resetAll(){if(!confirm('모든 데이터를 초기화할까요?'))return;CH=[];PH=[];RES={};localStorage.removeItem('dc4');renderCL();renderFL();updNav();gP(1);toast('초기화 완료! 🌸');}
+
+function fImg(f){return new Promise(function(r,j){var u=URL.createObjectURL(f),img=new Image();img.onload=function(){URL.revokeObjectURL(u);r(img);};img.onerror=j;img.src=u;});}
+function fURL(f){return new Promise(function(r,j){var rd=new FileReader();rd.onload=function(e){r(e.target.result);};rd.onerror=j;rd.readAsDataURL(f);});}
+function fBlob(f){return new Promise(function(r,j){var rd=new FileReader();rd.onload=function(e){r(new Blob([e.target.result],{type:f.type}));};rd.onerror=j;rd.readAsArrayBuffer(f);});}
+function bUrl(f){return new Promise(function(r,j){var rd=new FileReader();rd.onload=function(e){r(URL.createObjectURL(new Blob([e.target.result],{type:f.type})));};rd.onerror=j;rd.readAsArrayBuffer(f);});}
+function fExt(f){return(f.name.split('.').pop()||'jpg').toLowerCase();}
+function showSaveNotice(name, count, dt){
+  var isZip = (count===null);
+  var dispDt = dt.slice(0,4)+'년 '+parseInt(dt.slice(4,6))+'월 '+parseInt(dt.slice(6,8))+'일';
+  G('sn-title').textContent = isZip ? 'ZIP 저장 완료! 📦' : name+' 사진 저장 완료! 📥';
+  G('sn-body').textContent = isZip
+    ? '아이별 폴더로 묶인 ZIP 파일이 저장됐어요.'
+    : count+'장의 사진이 저장됐어요.';
+  var pathHtml = '<strong>📁 저장 위치</strong>' +
+    '파일 앱 → 다운로드 폴더<br>' +
+    '<strong>📄 파일 이름 형식</strong>' +
+    (isZip
+      ? '어린이집사진_'+dt+'.zip'
+      : name+'_'+dt+'_001.jpg ~ '+name+'_'+dt+'_'+String(count).padStart(3,'0')+'.jpg'
+    ) + '<br>' +
+    '<strong>📅 저장 날짜</strong>' + dispDt;
+  G('sn-path').innerHTML = pathHtml;
+  G('save-notice').classList.add('show');
+}
+function today(){
+  var d=new Date();
+  var yyyy=d.getFullYear();
+  var mm=String(d.getMonth()+1).padStart(2,'0');
+  var dd=String(d.getDate()).padStart(2,'0');
+  return yyyy+''+mm+''+dd;
+}
+function todayDisplay(){
+  var d=new Date();
+  return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
+}
+function toast(m){var t=G('toast');t.textContent=m;t.classList.add('show');clearTimeout(TT);TT=setTimeout(function(){t.classList.remove('show');},2800);}
+function showLD(m,s){G('lm').textContent=m||'처리 중…';G('ls').textContent=s||'';G('lpf2').style.width='0%';G('ld').classList.add('show');}
+function updS(t){G('ls').textContent=t;}
+function updP(p){G('lpf2').style.width=p+'%';}
+function hideLD(){G('ld').classList.remove('show');}
+</script>
+</body>
+</html>
